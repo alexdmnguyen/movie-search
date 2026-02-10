@@ -1,65 +1,146 @@
-import Image from "next/image";
+"use client";
+
+import { FormEvent, useEffect, useState } from "react";
+
+type Movie = {
+  title: string;
+  description: string;
+  year: number;
+};
+
+type SearchField = "title" | "description" | "year";
 
 export default function Home() {
+  const [query, setQuery] = useState("");
+  const [field, setField] = useState<SearchField>("title");
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadMovies() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const encodedQuery = encodeURIComponent(query);
+        const encodedField = encodeURIComponent(field);
+        const response = await fetch(`/api/movies?q=${encodedQuery}&field=${encodedField}`, {
+          method: "GET",
+          signal: controller.signal,
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+
+        const data = (await response.json()) as { movies: Movie[] };
+        setMovies(data.movies ?? []);
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
+
+        setError("Failed to load movies. Please try again.");
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadMovies();
+
+    return () => {
+      controller.abort();
+    };
+  }, [query, field]);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="min-h-screen bg-gradient-to-b from-zinc-100 to-zinc-50 px-4 py-8 text-zinc-900 sm:px-6 sm:py-12">
+      <div className="mx-auto w-full max-w-4xl">
+        <header className="text-center">
+          <h1 className="text-4xl font-bold tracking-tight text-zinc-900 sm:text-5xl">
+            Movie Search
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mx-auto mt-3 max-w-xl text-sm text-zinc-600 sm:text-base">
+            Find movies instantly by title, description, or year.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        </header>
+
+        <p className="mt-6 text-center text-sm text-zinc-600 sm:text-base">
+          Search by title, description, or year.
+        </p>
+
+        <form
+          onSubmit={handleSubmit}
+          className="mt-5 grid gap-3 sm:mt-6 sm:grid-cols-[1fr_190px]"
+        >
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Try: dark, dream, detective..."
+            className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition-all focus:border-zinc-500 focus:ring-2 focus:ring-zinc-300 sm:text-base"
+            aria-label="Search movies"
+          />
+          <select
+            value={field}
+            onChange={(event) => setField(event.target.value as SearchField)}
+            className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition-all focus:border-zinc-500 focus:ring-2 focus:ring-zinc-300 sm:text-base"
+            aria-label="Search field"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+            <option value="title">Title</option>
+            <option value="description">Description</option>
+            <option value="year">Year</option>
+          </select>
+        </form>
+
+        <section className="mt-8 sm:mt-10">
+          {loading ? (
+            <p className="text-center text-sm font-medium text-zinc-500 sm:text-base">
+              Loading movies...
+            </p>
+          ) : null}
+          {error ? <p className="text-red-600">{error}</p> : null}
+
+          {!loading && !error && movies.length === 0 ? (
+            <div className="rounded-2xl border border-zinc-200 bg-white/80 px-5 py-8 text-center shadow-sm">
+              <p className="text-base font-medium text-zinc-700 sm:text-lg">
+                No matching movies found.
+              </p>
+              <p className="mt-1 text-sm text-zinc-500">
+                Try a different search term or field.
+              </p>
+            </div>
+          ) : null}
+
+          {!loading && !error && movies.length > 0 ? (
+            <ul className="space-y-4">
+              {movies.map((movie) => (
+                <li
+                  key={`${movie.title}-${movie.year}`}
+                  className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md sm:p-5"
+                >
+                  <h2 className="text-lg font-semibold leading-tight text-zinc-900 sm:text-xl">
+                    {movie.title} <span className="text-zinc-500">({movie.year})</span>
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-zinc-700 sm:text-base">
+                    {movie.description}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      </div>
+    </main>
   );
 }
