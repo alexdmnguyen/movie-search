@@ -8,11 +8,11 @@ type Movie = {
   year: number;
 };
 
-type SearchField = "title" | "description" | "year";
+type SearchField = "all" | "title" | "description" | "year";
 
 export default function Home() {
   const [query, setQuery] = useState("");
-  const [field, setField] = useState<SearchField>("title");
+  const [field, setField] = useState<SearchField>("all");
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -97,6 +97,7 @@ export default function Home() {
             className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition-all focus:border-zinc-500 focus:ring-2 focus:ring-zinc-300 sm:text-base"
             aria-label="Search field"
           >
+            <option value="all">All</option>
             <option value="title">Title</option>
             <option value="description">Description</option>
             <option value="year">Year</option>
